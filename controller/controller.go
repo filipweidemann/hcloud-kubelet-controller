@@ -18,26 +18,36 @@ type CertificateSigningRequestReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-func (r *CertificateSigningRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, retErr error) {
+func (r *CertificateSigningRequestReconciler) FetchCSR(ctx context.Context, req ctrl.Request) (csr certificatesv1.CertificateSigningRequest, err error) {
 	l := log.FromContext(ctx)
-	l.Info("Start reconciliation loop...")
-
-	csr := certificatesv1.CertificateSigningRequest{}
-	err := r.Client.Get(ctx, req.NamespacedName, &csr)
+	csr = certificatesv1.CertificateSigningRequest{}
+	err = r.Client.Get(ctx, req.NamespacedName, &csr)
 
 	if apierrors.IsNotFound(err) {
 		l.Error(err, "CSR not found.")
-		return res, err
+		return csr, err
 	}
 
 	if err != nil {
 		l.Error(err, "Error while fetching CSR.")
-		return res, err
+		return csr, err
 	}
 
 	l.Info("Found CSR: %v", csr)
 
-	return ctrl.Result{}, nil
+	return csr, err
+}
+
+func (r *CertificateSigningRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, retErr error) {
+	l := log.FromContext(ctx)
+	l.Info("Start reconciliation loop...")
+
+	_, err := r.FetchCSR(ctx, req)
+	if err != nil {
+		return res, err
+	}
+
+	return res, err
 }
 
 func (r *CertificateSigningRequestReconciler) SetupWithManager(mgr ctrl.Manager) error {

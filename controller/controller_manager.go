@@ -39,7 +39,7 @@ func CreateControllerManager(options *ControllerManagerOptions) (ctrl.Manager, e
 		Metrics:                 server.Options{BindAddress: options.MetricsBindAddr},
 		HealthProbeBindAddress:  options.ProbeBindAddr,
 		LeaderElection:          true,
-		LeaderElectionID:        "pod-labeller",
+		LeaderElectionID:        "hcloud-kubelet-controller",
 		LeaderElectionNamespace: "kube-system",
 	}
 

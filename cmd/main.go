@@ -6,7 +6,9 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+	"github.com/filipweidemann/hcloud-kubelet-controller/connector"
 	"github.com/filipweidemann/hcloud-kubelet-controller/controller"
+	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -56,9 +58,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	clientset := kubernetes.NewForConfigOrDie(mgrOptions.K8sConfig)
+
 	if err = (&controller.CertificateSigningRequestReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:    mgr.GetClient(),
+		Clientset: *clientset,
+		Scheme:    mgr.GetScheme(),
+		Connector: connector.MockConnector{},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CertificateSigningRequest")
 		os.Exit(1)

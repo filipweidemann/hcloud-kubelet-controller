@@ -5,8 +5,11 @@ import (
 
 	"github.com/filipweidemann/hcloud-kubelet-controller/connector"
 	certificatesv1 "k8s.io/api/certificates/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/filipweidemann/hcloud-kubelet-controller/hack/helpers"
 
@@ -18,6 +21,7 @@ import (
 
 type CertificateSigningRequestReconciler struct {
 	Client    client.Client
+	Clientset kubernetes.Clientset
 	Scheme    *runtime.Scheme
 	Connector connector.UpstreamConnector
 }
@@ -43,13 +47,26 @@ func (r *CertificateSigningRequestReconciler) FetchCSR(ctx context.Context, req 
 	return csr, err
 }
 
+func (r *CertificateSigningRequestReconciler) SetApproval(
+	csr *certificatesv1.CertificateSigningRequest,
+	approval certificatesv1.RequestConditionType,
+) {
+	csr.Status.Conditions = append(csr.Status.Conditions, certificatesv1.CertificateSigningRequestCondition{
+		Type:           approval,
+		Status:         corev1.ConditionTrue,
+		Reason:         "automatic hcloud-kubelet-controller validation",
+		Message:        "The CSR was approved/denied based on the configured checks inside the hcloud-kubelet-controller",
+		LastUpdateTime: metav1.Now(),
+	})
+}
+
 func (r *CertificateSigningRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, rerr error) {
 	l := log.FromContext(ctx)
 	l.Info("Start reconciliation loop...")
 
 	csr, err := r.FetchCSR(ctx, req)
 	if err != nil {
-		return res, err
+		return res, nil
 	}
 
 	// ignore CSRs that are not meant to be processed by the KubeletServingSigner
@@ -64,7 +81,36 @@ func (r *CertificateSigningRequestReconciler) Reconcile(ctx context.Context, req
 		return res, rerr
 	}
 
-	return res, err
+	// Decode CSR to inspect requested content
+	x509Request, err := helpers.DecodeCSR(csr.Spec.Request)
+	if err != nil {
+		l.Info("Error while decoding CSR...")
+		return res, rerr
+	}
+
+	// Upstream Connector IP checks
+	ips := x509Request.IPAddresses
+	isValid := r.Connector.IsValidForIPs(ips)
+	if !isValid {
+		l.Info("CSR not valid for IPs: ")
+		l.Info("First IP: ")
+		l.Info(string(x509Request.IPAddresses[0]))
+		return res, rerr
+	}
+
+	// Checks are ok, approve & update upstream resource
+	l.Info("Setting Approval...")
+	r.SetApproval(&csr, certificatesv1.CertificateApproved)
+	r.Clientset.CertificatesV1().CertificateSigningRequests().UpdateApproval(
+		ctx,
+		req.Name,
+		&csr,
+		metav1.UpdateOptions{},
+	)
+
+	return ctrl.Result{
+		Requeue: false,
+	}, nil
 }
 
 func (r *CertificateSigningRequestReconciler) SetupWithManager(mgr ctrl.Manager) error {

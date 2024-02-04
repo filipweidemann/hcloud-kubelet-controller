@@ -11,7 +11,7 @@ type HcloudConnector struct {
 	client hcloud.Client
 }
 
-func (h *HcloudConnector) GetServerIPs() ([]net.IP, error) {
+func (h HcloudConnector) GetServerIPs() ([]net.IP, error) {
 	servers, err := h.client.Server.All(context.Background())
 	if err != nil {
 		return nil, err

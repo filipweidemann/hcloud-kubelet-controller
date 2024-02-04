@@ -60,6 +60,19 @@ func (r *CertificateSigningRequestReconciler) SetApproval(
 	})
 }
 
+func (r *CertificateSigningRequestReconciler) UpdateUpstreamResource(
+	ctx context.Context,
+	req ctrl.Request,
+	csr *certificatesv1.CertificateSigningRequest,
+) (*certificatesv1.CertificateSigningRequest, error) {
+	return r.Clientset.CertificatesV1().CertificateSigningRequests().UpdateApproval(
+		ctx,
+		req.Name,
+		csr,
+		metav1.UpdateOptions{},
+	)
+}
+
 func (r *CertificateSigningRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, rerr error) {
 	l := log.FromContext(ctx)
 	l.Info("Start reconciliation loop...")
@@ -88,6 +101,14 @@ func (r *CertificateSigningRequestReconciler) Reconcile(ctx context.Context, req
 		return res, rerr
 	}
 
+	err = CheckOrganization(*x509Request)
+	if err != nil {
+		l.Info("Deny approval because of Organization...")
+		r.SetApproval(&csr, certificatesv1.CertificateDenied)
+		r.UpdateUpstreamResource(ctx, req, &csr)
+		return ctrl.Result{Requeue: false}, rerr
+	}
+
 	// Upstream Connector IP checks
 	ips := x509Request.IPAddresses
 	isValid := r.Connector.IsValidForIPs(ips)
@@ -101,12 +122,7 @@ func (r *CertificateSigningRequestReconciler) Reconcile(ctx context.Context, req
 	// Checks are ok, approve & update upstream resource
 	l.Info("Setting Approval...")
 	r.SetApproval(&csr, certificatesv1.CertificateApproved)
-	r.Clientset.CertificatesV1().CertificateSigningRequests().UpdateApproval(
-		ctx,
-		req.Name,
-		&csr,
-		metav1.UpdateOptions{},
-	)
+	r.UpdateUpstreamResource(ctx, req, &csr)
 
 	return ctrl.Result{
 		Requeue: false,

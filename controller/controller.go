@@ -3,9 +3,11 @@ package controller
 import (
 	"context"
 
+	"github.com/filipweidemann/hcloud-kubelet-controller/connector"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+
 	// kubernetes "k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -13,9 +15,9 @@ import (
 )
 
 type CertificateSigningRequestReconciler struct {
-	Client client.Client
-	// cs     *kubernetes.Clientset
-	Scheme *runtime.Scheme
+	Client    client.Client
+	Scheme    *runtime.Scheme
+	Connector connector.UpstreamConnector
 }
 
 func (r *CertificateSigningRequestReconciler) FetchCSR(ctx context.Context, req ctrl.Request) (csr certificatesv1.CertificateSigningRequest, err error) {
@@ -24,7 +26,7 @@ func (r *CertificateSigningRequestReconciler) FetchCSR(ctx context.Context, req 
 	err = r.Client.Get(ctx, req.NamespacedName, &csr)
 
 	if apierrors.IsNotFound(err) {
-		l.Error(err, "CSR not found.")
+		l.Info("CSR not found.")
 		return csr, err
 	}
 
@@ -33,7 +35,8 @@ func (r *CertificateSigningRequestReconciler) FetchCSR(ctx context.Context, req 
 		return csr, err
 	}
 
-	l.Info("Found CSR: %v", csr)
+	l.Info("Found CSR: ")
+	l.Info(csr.Name)
 
 	return csr, err
 }

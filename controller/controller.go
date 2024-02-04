@@ -109,6 +109,14 @@ func (r *CertificateSigningRequestReconciler) Reconcile(ctx context.Context, req
 		return ctrl.Result{Requeue: false}, rerr
 	}
 
+	err = CheckCN(*x509Request)
+	if err != nil {
+		l.Info("Deny approval because of Organization CN...")
+		r.SetApproval(&csr, certificatesv1.CertificateDenied)
+		r.UpdateUpstreamResource(ctx, req, &csr)
+		return ctrl.Result{Requeue: false}, rerr
+	}
+
 	// Upstream Connector IP checks
 	ips := x509Request.IPAddresses
 	isValid := r.Connector.IsValidForIPs(ips)

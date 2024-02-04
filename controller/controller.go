@@ -8,6 +8,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/filipweidemann/hcloud-kubelet-controller/hack/helpers"
+
 	// kubernetes "k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,13 +43,25 @@ func (r *CertificateSigningRequestReconciler) FetchCSR(ctx context.Context, req 
 	return csr, err
 }
 
-func (r *CertificateSigningRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, retErr error) {
+func (r *CertificateSigningRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, rerr error) {
 	l := log.FromContext(ctx)
 	l.Info("Start reconciliation loop...")
 
-	_, err := r.FetchCSR(ctx, req)
+	csr, err := r.FetchCSR(ctx, req)
 	if err != nil {
 		return res, err
+	}
+
+	// ignore CSRs that are not meant to be processed by the KubeletServingSigner
+	if csr.Spec.SignerName != certificatesv1.KubeletServingSignerName {
+		l.Info("Ignore CSR not meant to be processed by controller...")
+		return res, rerr
+	}
+
+	approved, denied := helpers.GetCSRApproval(&csr)
+	if approved || denied {
+		l.Info("This CSR was already processed, ignoring...")
+		return res, rerr
 	}
 
 	return res, err

@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/filipweidemann/hcloud-kubelet-controller/connector"
 	"github.com/filipweidemann/hcloud-kubelet-controller/controller"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
@@ -23,6 +24,22 @@ var k8sClientSet *clientset.Clientset
 
 var testContext context.Context
 var testContextCancel context.CancelFunc
+
+func CreateNodeClientSet() *clientset.Clientset {
+	// create the node users with group system:masters
+	userInfo := envtest.User{Name: "testnode01", Groups: []string{"system:masters"}}
+	nodeCfg, err := testEnv.ControlPlane.AddUser(userInfo, cfg)
+	if err != nil {
+		log.Fatalf("Error during creation of node system user")
+	}
+
+	nodeClientSet, err := clientset.NewForConfig(nodeCfg.Config())
+	if err != nil {
+		log.Fatalf("Error while creating client set for node")
+	}
+
+	return nodeClientSet
+}
 
 func packageSetup() {
 	testContext, testContextCancel = context.WithCancel(context.Background())
@@ -45,8 +62,9 @@ func packageSetup() {
 	)
 	mgr, err := controller.CreateControllerManager(mgrOptions)
 	controller := &controller.CertificateSigningRequestReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		Connector: connector.MockConnector{},
 	}
 
 	if err := controller.SetupWithManager(mgr); err != nil {

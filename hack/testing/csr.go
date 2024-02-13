@@ -37,7 +37,7 @@ func CreateTestCSR(csrOpts *CSROptions) certificatesv1.CertificateSigningRequest
 	csr.Spec.Username = "system:node:" + csrOpts.NodeName
 	csrOpts.CN = csr.Spec.Username
 
-	csrOpts.ExpirationSeconds = 60
+	csrOpts.ExpirationSeconds = 600 // value below 600 is not allowed
 	csr.Spec.ExpirationSeconds = &csrOpts.ExpirationSeconds
 
 	_, privKey, _ := ed25519.GenerateKey(rand.Reader)

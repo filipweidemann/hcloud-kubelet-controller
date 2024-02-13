@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 
 	"github.com/filipweidemann/hcloud-kubelet-controller/connector"
 	certificatesv1 "k8s.io/api/certificates/v1"

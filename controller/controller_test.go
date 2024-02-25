@@ -17,7 +17,7 @@ func TestApprovalForValidCSR(t *testing.T) {
 	csrCfg := controller_test.CSROptions{
 		IPs:      []net.IP{net.ParseIP("192.168.0.100")},
 		CN:       "192.168.0.100",
-		NodeName: "testnode01",
+		NodeName: "system:nodes:testnode01",
 		DNSName:  "testnode01.company.tld",
 	}
 	csr := controller_test.CreateTestCSR(&csrCfg)

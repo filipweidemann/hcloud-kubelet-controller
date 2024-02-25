@@ -35,10 +35,11 @@ func CreateTestCSR(csrOpts *CSROptions) certificatesv1.CertificateSigningRequest
 		certificatesv1.UsageServerAuth,
 	)
 	csr.Spec.Username = "system:node:" + csrOpts.NodeName
-	csrOpts.CN = csr.Spec.Username
 
 	csrOpts.ExpirationSeconds = 600 // value below 600 is not allowed
 	csr.Spec.ExpirationSeconds = &csrOpts.ExpirationSeconds
+	csr.Labels = map[string]string{"IsTest": "true"}
+	csr.Annotations = map[string]string{"IsTest": "true"}
 
 	_, privKey, _ := ed25519.GenerateKey(rand.Reader)
 
@@ -52,7 +53,7 @@ func CreateTestCSR(csrOpts *CSROptions) certificatesv1.CertificateSigningRequest
 		},
 		IPAddresses: csrOpts.IPs,
 	}
-	x509RequestTemplate.DNSNames = []string{"test-node.cluster.local"}
+	x509RequestTemplate.DNSNames = []string{csrOpts.DNSName}
 	x509Request, _ := x509.CreateCertificateRequest(rand.Reader, &x509RequestTemplate, privKey)
 
 	pemRequest := pem.EncodeToMemory(&pem.Block{

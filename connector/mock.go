@@ -26,7 +26,6 @@ func (h MockConnector) IsValidForIPs(ips []net.IP) bool {
 		hadMatch := false
 
 		for _, uIP := range upstreamIPs {
-			println("Comparing IP ", ip.String(), " with IP ", uIP.String())
 			if ip.String() == uIP.String() {
 				hadMatch = true
 			}

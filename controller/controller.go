@@ -9,7 +9,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes"
+	clientset "k8s.io/client-go/kubernetes"
 
 	"github.com/filipweidemann/hcloud-kubelet-controller/hack/helpers"
 
@@ -21,7 +21,7 @@ import (
 
 type CertificateSigningRequestReconciler struct {
 	Client    client.Client
-	Clientset kubernetes.Clientset
+	Clientset *clientset.Clientset
 	Scheme    *runtime.Scheme
 	Connector connector.UpstreamConnector
 }
@@ -63,12 +63,12 @@ func (r *CertificateSigningRequestReconciler) SetApproval(
 func (r *CertificateSigningRequestReconciler) UpdateUpstreamResource(
 	ctx context.Context,
 	req ctrl.Request,
-	csr *certificatesv1.CertificateSigningRequest,
+	csr certificatesv1.CertificateSigningRequest,
 ) (*certificatesv1.CertificateSigningRequest, error) {
 	return r.Clientset.CertificatesV1().CertificateSigningRequests().UpdateApproval(
 		ctx,
 		req.Name,
-		csr,
+		&csr,
 		metav1.UpdateOptions{},
 	)
 }
@@ -105,7 +105,7 @@ func (r *CertificateSigningRequestReconciler) Reconcile(ctx context.Context, req
 	if err != nil {
 		l.Info("Deny approval because of Organization...")
 		r.SetApproval(&csr, certificatesv1.CertificateDenied)
-		r.UpdateUpstreamResource(ctx, req, &csr)
+		r.UpdateUpstreamResource(ctx, req, csr)
 		return ctrl.Result{Requeue: false}, rerr
 	}
 
@@ -113,7 +113,7 @@ func (r *CertificateSigningRequestReconciler) Reconcile(ctx context.Context, req
 	if err != nil {
 		l.Info("Deny approval because of Organization CN...")
 		r.SetApproval(&csr, certificatesv1.CertificateDenied)
-		r.UpdateUpstreamResource(ctx, req, &csr)
+		r.UpdateUpstreamResource(ctx, req, csr)
 		return ctrl.Result{Requeue: false}, rerr
 	}
 
@@ -130,7 +130,7 @@ func (r *CertificateSigningRequestReconciler) Reconcile(ctx context.Context, req
 	// Checks are ok, approve & update upstream resource
 	l.Info("Setting Approval...")
 	r.SetApproval(&csr, certificatesv1.CertificateApproved)
-	r.UpdateUpstreamResource(ctx, req, &csr)
+	r.UpdateUpstreamResource(ctx, req, csr)
 
 	return ctrl.Result{
 		Requeue: false,

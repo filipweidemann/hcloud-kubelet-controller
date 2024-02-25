@@ -63,6 +63,7 @@ func packageSetup() {
 	mgr, err := controller.CreateControllerManager(mgrOptions)
 	controller := &controller.CertificateSigningRequestReconciler{
 		Client:    mgr.GetClient(),
+		Clientset: k8sClientSet,
 		Scheme:    mgr.GetScheme(),
 		Connector: connector.MockConnector{},
 	}

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/filipweidemann/hcloud-kubelet-controller/hack/helpers"
 	"github.com/filipweidemann/hcloud-kubelet-controller/hack/testing"
 	"github.com/onsi/gomega"
 
@@ -30,15 +31,15 @@ func TestApprovalForValidCSR(t *testing.T) {
 
 	g.Eventually(func() bool {
 		csr, err := k8sClientSet.CertificatesV1().CertificateSigningRequests().Get(testContext, "test-csr", metav1.GetOptions{})
-
 		if err != nil {
 			t.Error("Could not fetch updated CSR")
 		}
 
-		if csr.Status.Certificate != nil {
-			return true
+		if len(csr.Status.Conditions) == 0 {
+			return false
 		}
 
-		return false
+		approved, _ := helpers.GetCSRApproval(csr)
+		return approved
 	}, time.Second*2, time.Millisecond*500).Should(gomega.BeTrue())
 }

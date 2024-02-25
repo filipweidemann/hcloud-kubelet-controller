@@ -21,8 +21,8 @@ func CheckOrganization(req x509.CertificateRequest) error {
 }
 
 func CheckCN(req x509.CertificateRequest) error {
-	if !strings.HasPrefix(req.Subject.CommonName, "system:node:") {
-		return errors.New("CSR Subject CN does not start with system:node:")
+	if !strings.HasPrefix(req.Subject.CommonName, "system:nodes:") {
+		return errors.New("CSR Subject CN does not start with system:nodes:")
 	}
 
 	return nil

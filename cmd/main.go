@@ -62,7 +62,7 @@ func main() {
 
 	if err = (&controller.CertificateSigningRequestReconciler{
 		Client:    mgr.GetClient(),
-		Clientset: *clientset,
+		Clientset: clientset,
 		Scheme:    mgr.GetScheme(),
 		Connector: connector.MockConnector{},
 	}).SetupWithManager(mgr); err != nil {

@@ -118,6 +118,8 @@ func (r *CertificateSigningRequestReconciler) Reconcile(ctx context.Context, req
 		l.Info("CSR not valid for IPs: ")
 		l.Info("First IP: ")
 		l.Info(string(x509Request.IPAddresses[0]))
+		r.SetApproval(&csr, certificatesv1.CertificateDenied)
+		r.UpdateUpstreamResource(ctx, req, csr)
 		return res, rerr
 	}
 

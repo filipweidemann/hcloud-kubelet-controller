@@ -8,11 +8,12 @@ import (
 )
 
 type HcloudConnector struct {
-	client hcloud.Client
+	Client hcloud.Client
 }
 
 func (h HcloudConnector) GetServerIPs() ([]net.IP, error) {
-	servers, err := h.client.Server.All(context.Background())
+	servers, err := h.Client.Server.All(context.Background())
+	println("fetched %v servers!", len(servers))
 	if err != nil {
 		return nil, err
 	}
@@ -23,6 +24,28 @@ func (h HcloudConnector) GetServerIPs() ([]net.IP, error) {
 	}
 
 	return ips, nil
+}
+
+func (h HcloudConnector) IsValidForIPs(csrIPs []net.IP) bool {
+	serverIPs, err := h.GetServerIPs()
+	if err != nil {
+		panic(err)
+	}
+
+	validIPs := 0
+	for _, serverIP := range serverIPs {
+		for _, csrIP := range csrIPs {
+			if serverIP.String() == csrIP.String() {
+				validIPs += 1
+			}
+		}
+	}
+
+	if len(csrIPs) == validIPs {
+		return true
+	}
+
+	return false
 }
 
 func (h HcloudConnector) getIPFromServer(s *hcloud.Server, ips []net.IP) []net.IP {

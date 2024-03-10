@@ -1,0 +1,25 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hcloud-kubelet-controller
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    matchLabels:
+      app: hcloud-kubelet-controller
+  template:
+    metadata:
+      labels:
+        app: hcloud-kubelet-controller
+    spec:
+      serviceAccountName: hcloud-kubelet-controller
+      containers:
+      - name: hcloud-kubelet-controller
+        image: fweidemann14/hcloud-kubelet-controller
+        env:
+          - name: HCLOUD_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.secret.name }}
+                key: {{ .Values.secret.key }}
